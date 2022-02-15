@@ -7,12 +7,13 @@
  *  Date: 03-21-2016
  *  Version: 0.2
  *  Thanks: Rob Duarte (SNESpad library), Paul Hackmann (documentation about the CDi pointing devices)
+ *  Backporting lost send fix from GenesisToCDi, Brian Harrison
  *  License: CC-BY 4.0 ( http://creativecommons.org/licenses/by/4.0/legalcode )
  *
  ******************************/
 
 #include <SoftwareSerial.h>
-#include <SNESpad.h>
+#include "SNESpad.h"
 #include <EEPROM.h>
 
 SNESpad pad = SNESpad(5, 6, 7); // Create a SNESpad instance, change the pin values to match your wiring (latch, clock, data)
@@ -48,6 +49,7 @@ void setup()
 // main
 void loop()
 {
+  bool goodsend = false;
   if(!assertRTS()) {
     digitalWrite(ledPin, HIGH);
     while(!assertRTS()) { } // wait for CDi to assert the RTS line
@@ -150,15 +152,26 @@ void loop()
 
   if((padbyte0 != oldpadbyte0) || (padbyte1 != 0b10000000) || (padbyte2 != 0b10000000) || ((padbyte0 & 0b00001111) != 0))  // see if state has changed
   {     
-    if(assertRTS()) vSerial.write(padbyte0);
-    if(assertRTS()) vSerial.write(padbyte1);
-    if(assertRTS()) vSerial.write(padbyte2);
+    //Ah, if !assertRTS() during send, the rest of the send is lost, and save state prevents resend.
+    //Make sure all three bytes send before saving to oldpadbyteX
+    if(assertRTS()) goodsend = false;
+    if(assertRTS()) {
+      vSerial.write(padbyte0);
+      if(assertRTS()) {
+        vSerial.write(padbyte1);
+        if(assertRTS()) {
+          vSerial.write(padbyte2);
+          goodsend = true;
+        }
+      }
+    }
   }
 
-  // save state
-  oldpadbyte0 = padbyte0; 
-  oldpadbyte1 = padbyte1;
-  oldpadbyte2 = padbyte2;
+  if(goodsend) {
+    oldpadbyte0 = padbyte0; 
+    oldpadbyte1 = padbyte1;
+    oldpadbyte2 = padbyte2;
+  }
 }
 
 // true if RTS asserted

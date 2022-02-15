@@ -3,6 +3,8 @@ SNES to CDi
 
 SNEStoCDi is an Arduino-based project that allows to use a Nintendo SNES (Super NES) / SFC (Super Famicom) gamepad on a Philips CDi player / game console. SNEStoCDi requires no more electronic than the Arduino itself. It's a pretty easy project for anyone with basic knowledge about Arduino and soldering.
 
+Backported lost-send fix from GenesisToCDi.  While the original would stop sending data when assertRTS was false, it would still save all the padbyteX values as if they had been sent.  The CD-i has the odd habbit of interrupting a send, and asking again later.  --Brian Harrison
+
 SNEStoCDi is released under Creative Common CC-BY 4.0 licence : http://creativecommons.org/licenses/by/4.0/legalcode
 
 
